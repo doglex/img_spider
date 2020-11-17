@@ -6,7 +6,7 @@ import (
 )
 
 const DbHistoryStorage = "history.db" // 断点续传文件
-const NumWorker = 32                 // 下载协程数量
+const NumWorker = 32                  // 下载协程数量
 var DbHistory = cache.New(cache.NoExpiration, cache.NoExpiration)
 var CountSuccess int64 = 0                  // 已成功数量
 var CountFail int64 = 0                     // 已失败数量
@@ -29,5 +29,6 @@ func main() {
 	}
 	//RunListSexy()
 	//RunListCN()
-	RunListCompany()
+	//RunListCompany()
+	RunListSets()
 }

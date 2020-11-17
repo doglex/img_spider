@@ -185,3 +185,87 @@ func RunListCompany() {
 	}
 	time.Sleep(2 * time.Second) // 保持可用
 }
+
+func RunListSets() {
+
+	companies := make([]string, 0)
+	tempX := "https://www.tujigu.com/s/%v/"
+	tempY := "https://www.tujigu.com/s/%v/index_%v.html"
+	for i := 1; i <= 500; i++ {
+		url_company := fmt.Sprintf(tempX, i)
+		companies = append(companies, url_company)
+		for j := 1; j < 200; j++ {
+			url_company := fmt.Sprintf(tempY, i, j)
+			ro := grequests.RequestOptions{
+				RequestTimeout: time.Second * 180,
+				Headers: map[string]string{
+					"Referer":    "https://www.tujigu.com/",
+					"User-Agent": GetUA(),
+				}}
+			resp, err := grequests.Get(url_company, &ro)
+			if err != nil {
+				log.Fatalln("Unable to make request: ", err)
+			}
+			respString := resp.String()
+			if strings.Contains(respString, "网站改版、请从首页重新访问！ 返回首页") {
+				fmt.Println("超出了", i, j)
+				break
+			} else {
+				companies = append(companies, url_company)
+				fmt.Println(url_company)
+			}
+		}
+	}
+	fmt.Println(companies)
+
+	set_galleray := make(map[string]int, 0)
+	fmt.Println("开始获取所有专辑。。。")
+	for _, mainPage := range companies {
+		ro := grequests.RequestOptions{
+			RequestTimeout: time.Second * 180,
+			Headers: map[string]string{
+				"Referer":    "https://www.tujigu.com/",
+				"User-Agent": GetUA(),
+			}}
+		resp, err := grequests.Get(mainPage, &ro)
+		if err != nil {
+			log.Fatalln("Unable to make request: ", err)
+		}
+		respString := resp.String()
+		for _, gallery_url := range ExtractGalleryFrom(respString) {
+			_, ok := set_galleray[gallery_url]
+			if ok {
+				continue
+			}
+			set_galleray[gallery_url] = 1
+			fmt.Println(gallery_url)
+		}
+	}
+	n := len(set_galleray)
+	fmt.Println("专辑总量", n, "\n\n\n")
+	i := 0
+	for k, _ := range set_galleray {
+		i += 1
+		k := k
+		to_print := fmt.Sprintf("[%v / %v]开始抓取-> %v", i, n, k)
+		fmt.Println(to_print)
+		go WalkGallery(k)
+		//time.Sleep(time.Second)
+		time.Sleep(2 * time.Microsecond) // 保持可用
+	}
+	time.Sleep(2 * time.Second) // 保持可用
+}
+
+func ExtractGalleryFrom(respString string) (all []string) {
+	defer DeferRecover()
+	doc := soup.HTMLParse(respString)
+	galleries := doc.Find("div", "class", "hezi").FindAll("a")
+	for _, gallery := range galleries {
+		gallery_url := gallery.Attrs()["href"]
+		if !strings.Contains(gallery_url, "/a/") {
+			continue
+		}
+		all = append(all, gallery_url)
+	}
+	return
+}
